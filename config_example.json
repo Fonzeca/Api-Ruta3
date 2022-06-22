@@ -1,0 +1,19 @@
+{
+    "services": [{
+        "name": "service1",
+        "prefix": "/service",
+        "serviceUrl": "http://service1:1111"
+    }, {
+        "name": "service2",
+        "prefix": "/service2",
+        "serviceUrl": "http://service2:2222",
+        "headers": {
+            "apiKey": "khdsfgjshdbuysdbfusdffiusdf78sdf6sd76f5sd76f5s87d4f58s6df678s6"
+        }
+    }],
+    "auth": {
+        "loginUrl": "http://authservice:3333/login",
+        "validateTokenUrl": "http://authservice:3333/validate",
+        "userHubApiKey": "khdsfgjshdbuysdbfusdffiusdf78sdf6sd76f5sd76f5s87d4f58s6df678s6"
+    }
+}
