@@ -1,8 +1,9 @@
 package main
 
 import (
-	"fmt"
+	"io"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/Fonzeca/Api-Ruta3/model"
@@ -24,49 +25,57 @@ func Router(r *mux.Router) {
 		r.PathPrefix(v.Prefix).HandlerFunc(BuildGeneralHandler(v))
 	}
 
-	r.HandleFunc("/auth/login", BuildAuthHandler(configRouter.Auth))
-	r.Use(BuildAuthMiddleware(configRouter.Auth))
+	// r.HandleFunc("/auth/login", BuildAuthHandler(configRouter.Auth))
+	// r.Use(BuildAuthMiddleware(configRouter.Auth))
 }
 
 // Genera una ruta generica
 func BuildGeneralHandler(service model.Service) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+
+		rqService := r.Clone(r.Context())
+
 		//Le quitamos el prefix para que vaya al servicio
-		pathWithoutPrefix := strings.Replace(r.URL.Path, service.Prefix, "", 1)
+		rqService.URL, _ = url.ParseRequestURI(service.ServiceUrl + strings.Replace(rqService.URL.Path, service.Prefix, "", 1))
+		rqService.RequestURI = ""
 
 		//Mandamos la llamada al service
-		res, err := utils.SendHtppRequest(service.ServiceUrl+pathWithoutPrefix, r, service.Headers)
+		res, err := http.DefaultClient.Do(rqService)
 		if err != nil {
 			panic(err)
 		}
+		defer res.Body.Close()
 
 		//Copiamos los headers de respuesta
 		utils.CopyHeaders(res.Header, w.Header())
 
-		//Seteamos el status code
-		w.WriteHeader(res.StatusCode)
-
 		//Copiamos el body de respuesta
-		utils.CopyBody(res, w)
+		io.Copy(w, res.Body)
 	}
 }
 
 func BuildAuthHandler(auth model.Auth) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+
+		rqService := r.Clone(r.Context())
+
+		//Le quitamos el prefix para que vaya al servicio
+		rqService.URL, _ = url.ParseRequestURI(auth.LoginUrl)
+		rqService.RequestURI = ""
+		rqService.Header.Set("apiKey", auth.UserHubApiKey)
+
 		//Mandamos la llamada al service
-		res, err := utils.SendHtppRequest(auth.LoginUrl, r, map[string]string{"apiKey": auth.UserHubApiKey})
+		res, err := http.DefaultClient.Do(rqService)
 		if err != nil {
 			panic(err)
 		}
+		defer res.Body.Close()
 
 		//Copiamos los headers de respuesta
 		utils.CopyHeaders(res.Header, w.Header())
 
-		//Seteamos el status code
-		w.WriteHeader(res.StatusCode)
-
 		//Copiamos el body de respuesta
-		utils.CopyBody(res, w)
+		io.Copy(w, res.Body)
 	}
 }
 
@@ -74,13 +83,25 @@ func BuildAuthMiddleware(auth model.Auth) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if !strings.HasPrefix(r.URL.Path, "/auth") {
-				//Mandamos la llamada al service
-				res, err := utils.SendHtppRequest(auth.ValidateTokenUrl, r, nil)
+				rq, err := http.NewRequest("POST", auth.ValidateTokenUrl, nil)
 				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
 					panic(err)
 				}
-				fmt.Println(res)
+				rq.Header.Set("apiKey", auth.UserHubApiKey)
+				rq.Header.Set("Authorization", r.Header.Get("Authorization"))
 
+				res, err := http.DefaultClient.Do(rq)
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					panic(err)
+				}
+
+				if res.StatusCode == 200 {
+					next.ServeHTTP(w, r)
+					return
+				}
+				w.WriteHeader(http.StatusUnauthorized)
 			}
 			next.ServeHTTP(w, r)
 		})

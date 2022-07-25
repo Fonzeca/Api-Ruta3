@@ -6,10 +6,12 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/viper"
 	httpSwagger "github.com/swaggo/http-swagger"
 
 	_ "github.com/Fonzeca/Api-Ruta3/docs"
+	"github.com/Fonzeca/Api-Ruta3/utils"
 )
 
 // @title        Api-Ruta3
@@ -27,8 +29,16 @@ func main() {
 	r := mux.NewRouter()
 	Router(r)
 	r.PathPrefix("/swagger/").Handler(httpSwagger.WrapHandler)
+	r.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			utils.OpsProcessed.Inc()
+			next.ServeHTTP(w, r)
+		})
+	})
 
-	log.Fatal(http.ListenAndServe(":8082", r))
+	http.Handle("/metrics", promhttp.Handler())
+	http.Handle("/", r)
+	log.Fatal(http.ListenAndServe(":8082", nil))
 }
 
 // Handler
