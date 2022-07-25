@@ -25,7 +25,7 @@ func Router(r *mux.Router) {
 		r.PathPrefix(v.Prefix).HandlerFunc(BuildGeneralHandler(v))
 	}
 
-	// r.HandleFunc("/auth/login", BuildAuthHandler(configRouter.Auth))
+	r.HandleFunc("/auth/login", BuildAuthHandler(configRouter.Auth))
 	// r.Use(BuildAuthMiddleware(configRouter.Auth))
 }
 
@@ -54,6 +54,7 @@ func BuildGeneralHandler(service model.Service) func(http.ResponseWriter, *http.
 	}
 }
 
+//Genera la ruta de login
 func BuildAuthHandler(auth model.Auth) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 
@@ -61,7 +62,7 @@ func BuildAuthHandler(auth model.Auth) func(http.ResponseWriter, *http.Request) 
 
 		//Le quitamos el prefix para que vaya al servicio
 		rqService.URL, _ = url.ParseRequestURI(auth.LoginUrl)
-		rqService.RequestURI = ""
+		rqService.RequestURI = "" //Da error si esto no esta vacio.
 		rqService.Header.Set("apiKey", auth.UserHubApiKey)
 
 		//Mandamos la llamada al service
@@ -79,10 +80,13 @@ func BuildAuthHandler(auth model.Auth) func(http.ResponseWriter, *http.Request) 
 	}
 }
 
+//Genera el middleware para validar el token
 func BuildAuthMiddleware(auth model.Auth) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
 			if !strings.HasPrefix(r.URL.Path, "/auth") {
+				//Armamos el request para verificar el token
 				rq, err := http.NewRequest("POST", auth.ValidateTokenUrl, nil)
 				if err != nil {
 					w.WriteHeader(http.StatusInternalServerError)
@@ -91,6 +95,7 @@ func BuildAuthMiddleware(auth model.Auth) func(http.Handler) http.Handler {
 				rq.Header.Set("apiKey", auth.UserHubApiKey)
 				rq.Header.Set("Authorization", r.Header.Get("Authorization"))
 
+				//Hacemos la llamada
 				res, err := http.DefaultClient.Do(rq)
 				if err != nil {
 					w.WriteHeader(http.StatusInternalServerError)
