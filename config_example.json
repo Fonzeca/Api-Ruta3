@@ -2,7 +2,11 @@
     "services": [{
         "name": "service1",
         "prefix": "/service",
-        "serviceUrl": "http://service1:1111"
+        "serviceUrl": "http://service1:1111",
+        "publicUrls": [
+            "/public/**",
+            "/test"
+        ]
     }, {
         "name": "service2",
         "prefix": "/service2",

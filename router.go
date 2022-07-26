@@ -4,6 +4,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 
 	"github.com/Fonzeca/Api-Ruta3/model"
@@ -26,7 +27,7 @@ func Router(r *mux.Router) {
 	}
 
 	r.HandleFunc("/auth/login", BuildAuthHandler(configRouter.Auth))
-	// r.Use(BuildAuthMiddleware(configRouter.Auth))
+	r.Use(BuildAuthMiddleware(configRouter.Auth, configRouter.Services))
 }
 
 // Genera una ruta generica
@@ -48,6 +49,9 @@ func BuildGeneralHandler(service model.Service) func(http.ResponseWriter, *http.
 
 		//Copiamos los headers de respuesta
 		utils.CopyHeaders(res.Header, w.Header())
+
+		//Copiamos el status code
+		w.WriteHeader(res.StatusCode)
 
 		//Copiamos el body de respuesta
 		io.Copy(w, res.Body)
@@ -85,36 +89,53 @@ func BuildAuthHandler(auth model.Auth) func(http.ResponseWriter, *http.Request) 
 }
 
 //Genera el middleware para validar el token
-func BuildAuthMiddleware(auth model.Auth) func(http.Handler) http.Handler {
+func BuildAuthMiddleware(auth model.Auth, services []model.Service) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-			if !strings.HasPrefix(r.URL.Path, "/auth") {
-				//Armamos el request para verificar el token
-				rq, err := http.NewRequest("POST", auth.ValidateTokenUrl, nil)
-				if err != nil {
-					w.WriteHeader(http.StatusInternalServerError)
-					panic(err)
-				}
-				rq.Header.Set("apiKey", auth.UserHubApiKey)
-				rq.Header.Set("Authorization", r.Header.Get("Authorization"))
-
-				//Hacemos la llamada
-				res, err := http.DefaultClient.Do(rq)
-				if err != nil {
-					w.WriteHeader(http.StatusInternalServerError)
-					panic(err)
-				}
-
-				if res.StatusCode == 200 {
-					next.ServeHTTP(w, r)
-					return
-				}
-				//Si no es 200, devolvemos que no tiene acceso
-				w.WriteHeader(http.StatusUnauthorized)
+			if strings.HasPrefix(r.URL.Path, "/auth") {
+				next.ServeHTTP(w, r)
 				return
 			}
-			next.ServeHTTP(w, r)
+
+			for _, se := range services {
+				if strings.HasPrefix(r.URL.Path, se.Prefix) {
+					pathToVerificate := strings.TrimPrefix(r.URL.Path, se.Prefix)
+
+					for _, publicUrl := range se.PublicUrls {
+						matched, _ := regexp.MatchString("^"+publicUrl, pathToVerificate)
+						if matched {
+							next.ServeHTTP(w, r)
+							return
+						}
+					}
+
+				}
+			}
+
+			//Armamos el request para verificar el token
+			rq, err := http.NewRequest("POST", auth.ValidateTokenUrl, nil)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				panic(err)
+			}
+			rq.Header.Set("apiKey", auth.UserHubApiKey)
+			rq.Header.Set("Authorization", r.Header.Get("Authorization"))
+
+			//Hacemos la llamada
+			res, err := http.DefaultClient.Do(rq)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				panic(err)
+			}
+
+			if res.StatusCode == 200 {
+				next.ServeHTTP(w, r)
+				return
+			}
+			//Si no es 200, devolvemos que no tiene acceso
+			w.WriteHeader(http.StatusUnauthorized)
+			return
 		})
 	}
 }

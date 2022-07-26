@@ -10,6 +10,7 @@ type Service struct {
 	Prefix     string            `mapstructure:"prefix"`
 	ServiceUrl string            `mapstructure:"serviceUrl"`
 	Headers    map[string]string `mapstructure:"headers"`
+	PublicUrls []string          `mapstructure:"publicUrls"`
 }
 
 type Auth struct {
