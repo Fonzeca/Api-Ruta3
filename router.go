@@ -26,7 +26,7 @@ func Router(r *mux.Router) {
 	}
 
 	r.HandleFunc("/auth/login", BuildAuthHandler(configRouter.Auth))
-	r.Use(BuildAuthMiddleware(configRouter.Auth))
+	// r.Use(BuildAuthMiddleware(configRouter.Auth))
 }
 
 // Genera una ruta generica
@@ -36,7 +36,7 @@ func BuildGeneralHandler(service model.Service) func(http.ResponseWriter, *http.
 		rqService := r.Clone(r.Context())
 
 		//Le quitamos el prefix para que vaya al servicio
-		rqService.URL, _ = url.ParseRequestURI(service.ServiceUrl + strings.Replace(rqService.URL.Path, service.Prefix, "", 1))
+		rqService.URL, _ = url.ParseRequestURI(service.ServiceUrl + strings.Replace(rqService.RequestURI, service.Prefix, "", 1))
 		rqService.RequestURI = ""
 
 		//Mandamos la llamada al service
