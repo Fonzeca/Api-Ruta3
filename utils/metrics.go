@@ -8,6 +8,6 @@ import (
 var (
 	OpsProcessed = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "carmind_processed_calls_total",
-		Help: "The total number of processed events",
+		Help: "El total de llamadas procesadas.",
 	})
 )

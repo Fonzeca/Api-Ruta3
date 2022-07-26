@@ -26,7 +26,7 @@ func Router(r *mux.Router) {
 	}
 
 	r.HandleFunc("/auth/login", BuildAuthHandler(configRouter.Auth))
-	// r.Use(BuildAuthMiddleware(configRouter.Auth))
+	r.Use(BuildAuthMiddleware(configRouter.Auth))
 }
 
 // Genera una ruta generica
@@ -75,8 +75,12 @@ func BuildAuthHandler(auth model.Auth) func(http.ResponseWriter, *http.Request) 
 		//Copiamos los headers de respuesta
 		utils.CopyHeaders(res.Header, w.Header())
 
+		//Copiamos el status code
+		w.WriteHeader(res.StatusCode)
+
 		//Copiamos el body de respuesta
 		io.Copy(w, res.Body)
+
 	}
 }
 
@@ -106,7 +110,9 @@ func BuildAuthMiddleware(auth model.Auth) func(http.Handler) http.Handler {
 					next.ServeHTTP(w, r)
 					return
 				}
+				//Si no es 200, devolvemos que no tiene acceso
 				w.WriteHeader(http.StatusUnauthorized)
+				return
 			}
 			next.ServeHTTP(w, r)
 		})
