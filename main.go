@@ -37,12 +37,12 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	muxxie := http.NewServeMux()
 
 	r := mux.NewRouter()
 	Router(r)
+
+	mux.CORSMethodMiddleware(r)
 	r.PathPrefix("/swagger/").Handler(httpSwagger.WrapHandler)
-	r.Handle("/metrics", promhttp.Handler())
 	r.Use(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			utils.OpsProcessed.Inc()
@@ -50,16 +50,11 @@ func main() {
 			next.ServeHTTP(w, r)
 		})
 	})
+	r.Handle("/metrics", promhttp.Handler())
 
-	muxxie.Handle("/", r)
+	handler := cors.AllowAll().Handler(r)
 
-	c := cors.New(cors.Options{
-		AllowedOrigins:   []string{"*"},
-		AllowCredentials: true,
-		Debug:            true,
-	})
-
-	log.Fatal(http.ListenAndServe(":8082", c.Handler(r)))
+	log.Fatal(http.ListenAndServe(":8082", handler))
 }
 
 func configViper() {
