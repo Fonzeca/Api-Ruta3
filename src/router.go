@@ -7,8 +7,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/Fonzeca/Api-Ruta3/model"
-	"github.com/Fonzeca/Api-Ruta3/utils"
+	"github.com/Fonzeca/Api-Ruta3/src/model"
+	"github.com/Fonzeca/Api-Ruta3/src/utils"
 	"github.com/gorilla/mux"
 	"github.com/spf13/viper"
 )
@@ -92,6 +92,10 @@ func BuildAuthHandler(auth model.Auth) func(http.ResponseWriter, *http.Request) 
 func BuildAuthMiddleware(auth model.Auth, services []model.Service) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Method == "OPTIONS" {
+				next.ServeHTTP(w, r)
+				return
+			}
 
 			if strings.HasPrefix(r.URL.Path, "/auth") {
 				next.ServeHTTP(w, r)

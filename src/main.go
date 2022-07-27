@@ -4,16 +4,14 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"time"
 
-	"github.com/afiskon/promtail-client/promtail"
 	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/viper"
 	httpSwagger "github.com/swaggo/http-swagger"
 
-	_ "github.com/Fonzeca/Api-Ruta3/docs"
-	"github.com/Fonzeca/Api-Ruta3/utils"
+	_ "github.com/Fonzeca/Api-Ruta3/src/docs"
+	"github.com/Fonzeca/Api-Ruta3/src/utils"
 )
 
 // @title        Api-Ruta3
@@ -22,29 +20,20 @@ import (
 func main() {
 	configViper()
 
-	labels := "{source=\"api-ruta3\",job=\"job_api-ruta3\"}"
-	conf := promtail.ClientConfig{
-		PushURL:            "http://vps-2721477-x.dattaweb.com:3100/loki/api/v1/push",
-		Labels:             labels,
-		BatchWait:          5 * time.Second,
-		BatchEntriesNumber: 10000,
-		SendLevel:          promtail.INFO,
-		PrintLevel:         promtail.ERROR,
-	}
-
-	loki, err := promtail.NewClientJson(conf)
+	logger, err := utils.NewApiGatewayLogger()
 	if err != nil {
 		panic(err)
 	}
 
 	r := mux.NewRouter()
 	Router(r)
-
 	r.PathPrefix("/swagger/").Handler(httpSwagger.WrapHandler)
 	r.Use(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			utils.OpsProcessed.Inc()
-			loki.Infof(r.URL.String())
+
+			logger.Log(r.Clone(r.Context()))
+
 			next.ServeHTTP(w, r)
 		})
 	})
