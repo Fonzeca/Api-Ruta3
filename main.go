@@ -9,7 +9,6 @@ import (
 	"github.com/afiskon/promtail-client/promtail"
 	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/rs/cors"
 	"github.com/spf13/viper"
 	httpSwagger "github.com/swaggo/http-swagger"
 
@@ -41,7 +40,6 @@ func main() {
 	r := mux.NewRouter()
 	Router(r)
 
-	mux.CORSMethodMiddleware(r)
 	r.PathPrefix("/swagger/").Handler(httpSwagger.WrapHandler)
 	r.Use(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -52,9 +50,9 @@ func main() {
 	})
 	r.Handle("/metrics", promhttp.Handler())
 
-	handler := cors.AllowAll().Handler(r)
+	utils.EnableCORS(r)
 
-	log.Fatal(http.ListenAndServe(":8082", handler))
+	log.Fatal(http.ListenAndServe(":8082", r))
 }
 
 func configViper() {
