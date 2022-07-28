@@ -1,0 +1,42 @@
+name: Deploy to dev
+on: [push]
+jobs:
+  build:
+    name: Build and Deploy
+    runs-on: ubuntu-latest
+    environment: Dev
+    steps:
+      - name: Actualizar repo
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.KEY }}
+          port: ${{ secrets.PORT }}
+          script: |
+            cd ${{ secrets.PATH }}
+            git fetch --all && git reset --hard origin/main && git pull origin
+      - name: Stop running container
+        uses: appleboy/ssh-action@master
+        continue-on-error: true
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.KEY }}
+          port: ${{ secrets.PORT }}
+          script_stop: false
+          script: |
+            cd ${{ secrets.PATH }}
+            docker compose stop Api-Ruta3
+            docker compose rm -f
+      - name: Run docker compose
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.KEY }}
+          port: ${{ secrets.PORT }}
+          script: |
+            cd ${{ secrets.PATH }}
+            docker compose build Api-Ruta3
+            docker compose up -d
