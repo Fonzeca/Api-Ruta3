@@ -32,7 +32,12 @@ func main() {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			utils.OpsProcessed.Inc()
 
-			logger.Log(r.Clone(r.Context()))
+			cloned, err := utils.DeepCopyRequest(r)
+			if err != nil {
+				panic(err)
+			}
+
+			logger.Log(cloned)
 
 			next.ServeHTTP(w, r)
 		})
