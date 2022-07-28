@@ -1,6 +1,8 @@
 package utils
 
 import (
+	"bytes"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -41,10 +43,11 @@ func (logger *apigatwayLogger) Log(r *http.Request) {
 }
 
 func (logger *apigatwayLogger) log(r *http.Request) {
-	bodyBytes, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		panic(err)
-	}
+	bodyBytes, _ := ioutil.ReadAll(r.Body)
+	bd1 := ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
+	bd2 := ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
+	r.Body = bd1
 
-	logger.loki.Infof("Method: %s, Path: %s, Query: %s, Body: %s", r.Method, r.URL.Path, r.URL.RawQuery, string(bodyBytes))
+	logger.loki.Infof("Method: %s, Path: %s, Query: %s, Body: %s, Form: %s", r.Method, r.URL.Path, r.URL.RawQuery, bd2, r.Form.Encode())
+	fmt.Printf("Method: %s, Path: %s, Query: %s, Body: %s, Form: %s\n", r.Method, r.URL.Path, r.URL.RawQuery, bd2, r.Form.Encode())
 }

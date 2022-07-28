@@ -26,22 +26,17 @@ func main() {
 	}
 
 	r := mux.NewRouter()
-	Router(r)
 	r.PathPrefix("/swagger/").Handler(httpSwagger.WrapHandler)
 	r.Use(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			utils.OpsProcessed.Inc()
 
-			cloned, err := utils.DeepCopyRequest(r)
-			if err != nil {
-				panic(err)
-			}
-
-			logger.Log(cloned)
+			logger.Log(r)
 
 			next.ServeHTTP(w, r)
 		})
 	})
+	Router(r)
 	r.Handle("/metrics", promhttp.Handler())
 
 	utils.EnableCORS(r)

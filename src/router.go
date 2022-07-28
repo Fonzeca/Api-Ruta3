@@ -34,7 +34,7 @@ func Router(r *mux.Router) {
 func BuildGeneralHandler(service model.Service) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		rqService := r.Clone(r.Context())
+		rqService, err := utils.DeepCopyRequest(r)
 
 		//Le quitamos el prefix para que vaya al servicio
 		rqService.URL, _ = url.ParseRequestURI(service.ServiceUrl + strings.Replace(rqService.RequestURI, service.Prefix, "", 1))
@@ -137,8 +137,15 @@ func BuildAuthMiddleware(auth model.Auth, services []model.Service) func(http.Ha
 				next.ServeHTTP(w, r)
 				return
 			}
+
+			//Copiamos los headers de respuesta
+			utils.CopyHeaders(res.Header, w.Header())
+
 			//Si no es 200, devolvemos que no tiene acceso
 			w.WriteHeader(http.StatusUnauthorized)
+
+			//Copiamos el body de respuesta
+			io.Copy(w, res.Body)
 			return
 		})
 	}
