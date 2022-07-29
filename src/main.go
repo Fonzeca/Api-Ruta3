@@ -6,11 +6,8 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/viper"
-	httpSwagger "github.com/swaggo/http-swagger"
 
-	_ "github.com/Fonzeca/Api-Ruta3/src/docs"
 	"github.com/Fonzeca/Api-Ruta3/src/utils"
 )
 
@@ -26,32 +23,28 @@ func main() {
 	}
 
 	r := mux.NewRouter()
-	r.PathPrefix("/swagger/").Handler(httpSwagger.WrapHandler)
 	r.Use(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			utils.OpsProcessed.Inc()
-
 			logger.Log(r)
 
 			next.ServeHTTP(w, r)
 		})
 	})
 	Router(r)
-	r.Handle("/metrics", promhttp.Handler())
 
-	utils.EnableCORS(r)
-
+	fmt.Println("░█████╗░██████╗░██╗░░░░░░██████╗░██╗░░░██╗████████╗░█████╗░██████╗░\n██╔══██╗██╔══██╗██║░░░░░░██╔══██╗██║░░░██║╚══██╔══╝██╔══██╗╚════██╗\n███████║██████╔╝██║█████╗██████╔╝██║░░░██║░░░██║░░░███████║░█████╔╝\n██╔══██║██╔═══╝░██║╚════╝██╔══██╗██║░░░██║░░░██║░░░██╔══██║░╚═══██╗\n██║░░██║██║░░░░░██║░░░░░░██║░░██║╚██████╔╝░░░██║░░░██║░░██║██████╔╝\n╚═╝░░╚═╝╚═╝░░░░░╚═╝░░░░░░╚═╝░░╚═╝░╚═════╝░░░░╚═╝░░░╚═╝░░╚═╝╚═════╝░")
 	log.Fatal(http.ListenAndServe(":8082", r))
 }
 
 func configViper() {
-	viper.SetConfigName("../config.json")
+	viper.SetConfigName("config.json")
 	viper.SetConfigType("json")
-	viper.AddConfigPath(".")
+	viper.AddConfigPath("../")
 	err := viper.ReadInConfig()
 	if err != nil {
 		panic(err)
 	}
+
 }
 
 // Handler

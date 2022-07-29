@@ -2,7 +2,6 @@ package utils
 
 import (
 	"bytes"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -39,15 +38,20 @@ func NewApiGatewayLogger() (apigatwayLogger, error) {
 }
 
 func (logger *apigatwayLogger) Log(r *http.Request) {
-	go logger.log(r)
+	//Leemos los bytes
+	bodyBytes, _ := ioutil.ReadAll(r.Body)
+
+	//Guardamos los bytes otra vez en el request
+	bytesBuffer := ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
+	r.Body = bytesBuffer
+
+	//Le pasamos los bytes crudos al logger
+	go logger.log(r, &bodyBytes)
 }
 
-func (logger *apigatwayLogger) log(r *http.Request) {
-	bodyBytes, _ := ioutil.ReadAll(r.Body)
-	bd1 := ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
-	bd2 := ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
-	r.Body = bd1
+func (logger *apigatwayLogger) log(r *http.Request, bodyBytes *[]byte) {
+	bytesBuffer := ioutil.NopCloser(bytes.NewBuffer(*bodyBytes))
 
-	logger.loki.Infof("Method: %s, Path: %s, Query: %s, Body: %s, Form: %s", r.Method, r.URL.Path, r.URL.RawQuery, bd2, r.Form.Encode())
-	fmt.Printf("Method: %s, Path: %s, Query: %s, Body: %s, Form: %s\n", r.Method, r.URL.Path, r.URL.RawQuery, bd2, r.Form.Encode())
+	logger.loki.Infof("Method: %s, Path: %s, Query: %s, Body: %s, Form: %s", r.Method, r.URL.Path, r.URL.RawQuery, bytesBuffer, r.Form.Encode())
+	// fmt.Printf("Method: %s, Path: %s, Query: %s, Body: %s, Form: %s\n", r.Method, r.URL.Path, r.URL.RawQuery, bytesBuffer, r.Form.Encode())
 }

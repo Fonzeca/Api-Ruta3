@@ -3,7 +3,7 @@ package main
 import (
 	"io"
 	"net/http"
-	"net/url"
+	"net/http/httputil"
 	"regexp"
 	"strings"
 
@@ -23,68 +23,39 @@ func Router(r *mux.Router) {
 
 	//Armamos las rutas
 	for _, v := range configRouter.Services {
-		r.PathPrefix(v.Prefix).HandlerFunc(BuildGeneralHandler(v))
+		proxy := httputil.ReverseProxy{
+			Director: buildDirectorFunc(v),
+			ModifyResponse: func(r *http.Response) error {
+				utils.EnableCORS(r)
+				return nil
+			},
+		}
+		r.PathPrefix(v.Prefix).Handler(&proxy)
 	}
 
-	r.HandleFunc("/auth/login", BuildAuthHandler(configRouter.Auth))
+	r.Path("/auth/login").Handler(buildAuthHandler(configRouter.Auth)).Methods(http.MethodPost)
 	r.Use(BuildAuthMiddleware(configRouter.Auth, configRouter.Services))
 }
 
-// Genera una ruta generica
-func BuildGeneralHandler(service model.Service) func(http.ResponseWriter, *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
-
-		rqService, err := utils.DeepCopyRequest(r)
-
-		//Le quitamos el prefix para que vaya al servicio
-		rqService.URL, _ = url.ParseRequestURI(service.ServiceUrl + strings.Replace(rqService.RequestURI, service.Prefix, "", 1))
-		rqService.RequestURI = ""
-
-		//Mandamos la llamada al service
-		res, err := http.DefaultClient.Do(rqService)
-		if err != nil {
-			panic(err)
-		}
-		defer res.Body.Close()
-
-		//Copiamos los headers de respuesta
-		utils.CopyHeaders(res.Header, w.Header())
-
-		//Copiamos el status code
-		w.WriteHeader(res.StatusCode)
-
-		//Copiamos el body de respuesta
-		io.Copy(w, res.Body)
+func buildDirectorFunc(service model.Service) func(r *http.Request) {
+	return func(r *http.Request) {
+		r.URL.Scheme = "http"
+		r.URL.Host = service.ServiceUrl
+		r.URL.Path = strings.Replace(r.URL.Path, service.Prefix, "", 1)
 	}
 }
 
-//Genera la ruta de login
-func BuildAuthHandler(auth model.Auth) func(http.ResponseWriter, *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
-
-		rqService := r.Clone(r.Context())
-
-		//Le quitamos el prefix para que vaya al servicio
-		rqService.URL, _ = url.ParseRequestURI(auth.LoginUrl)
-		rqService.RequestURI = "" //Da error si esto no esta vacio.
-		rqService.Header.Set("apiKey", auth.UserHubApiKey)
-
-		//Mandamos la llamada al service
-		res, err := http.DefaultClient.Do(rqService)
-		if err != nil {
-			panic(err)
-		}
-		defer res.Body.Close()
-
-		//Copiamos los headers de respuesta
-		utils.CopyHeaders(res.Header, w.Header())
-
-		//Copiamos el status code
-		w.WriteHeader(res.StatusCode)
-
-		//Copiamos el body de respuesta
-		io.Copy(w, res.Body)
-
+func buildAuthHandler(auth model.Auth) *httputil.ReverseProxy {
+	return &httputil.ReverseProxy{
+		Director: func(r *http.Request) {
+			r.URL.Scheme = "http"
+			r.URL.Host = auth.LoginUrl
+			r.Header.Set("apiKey", auth.UserHubApiKey)
+		},
+		ModifyResponse: func(r *http.Response) error {
+			utils.EnableCORS(r)
+			return nil
+		},
 	}
 }
 
@@ -118,7 +89,7 @@ func BuildAuthMiddleware(auth model.Auth, services []model.Service) func(http.Ha
 			}
 
 			//Armamos el request para verificar el token
-			rq, err := http.NewRequest("POST", auth.ValidateTokenUrl, nil)
+			rq, err := http.NewRequest("POST", "http://"+auth.ValidateTokenUrl, nil)
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				panic(err)
