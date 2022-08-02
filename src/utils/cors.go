@@ -14,14 +14,10 @@ var (
 
 func EnableCORS(r *http.Response) {
 	if origin := r.Request.Header.Get("Origin"); allowList[origin] {
-		if r.Request.Method == http.MethodOptions {
-			r.Header.Set("Access-Control-Allow-Origin", origin)
-		} else {
-			r.Header.Set("Access-Control-Allow-Origin", origin)
-			r.Header.Set("Access-Control-Allow-Credentials", "true")
-			r.Header.Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-			r.Header.Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
-		}
+		r.Header.Set("Access-Control-Allow-Origin", origin)
+		r.Header.Set("Access-Control-Allow-Credentials", "true")
+		r.Header.Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+		r.Header.Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
 	}
 
 }
