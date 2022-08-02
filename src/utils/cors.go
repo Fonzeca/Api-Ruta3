@@ -23,5 +23,17 @@ func EnableCORS(r *http.Response) {
 			r.Header.Set("Access-Control-Allow-Origin", origin)
 		}
 	}
+}
 
+func WriteEnableCORS(w http.ResponseWriter, r *http.Request) {
+	if origin := r.Header.Get("Origin"); allowList[origin] {
+		if r.Method == http.MethodOptions {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+			w.Header().Set("Access-Control-Allow-Credentials", "true")
+			w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+			w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+		} else {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+		}
+	}
 }

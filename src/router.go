@@ -113,11 +113,14 @@ func BuildAuthMiddleware(auth model.Auth, services []model.Service) func(http.Ha
 			//Copiamos los headers de respuesta
 			utils.CopyHeaders(res.Header, w.Header())
 
+			utils.WriteEnableCORS(w, r)
+
 			//Si no es 200, devolvemos que no tiene acceso
 			w.WriteHeader(http.StatusUnauthorized)
 
 			//Copiamos el body de respuesta
 			io.Copy(w, res.Body)
+
 			return
 		})
 	}
