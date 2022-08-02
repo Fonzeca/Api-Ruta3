@@ -19,9 +19,6 @@ func EnableCORS(r *http.Response) {
 			r.Header.Set("Access-Control-Allow-Credentials", "true")
 			r.Header.Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
 			r.Header.Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
-			r.Body = nil
-			r.StatusCode = 204
-			r.Status = http.StatusText(204)
 		} else {
 			r.Header.Set("Access-Control-Allow-Origin", origin)
 		}
