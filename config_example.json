@@ -16,8 +16,9 @@
         }
     }],
     "auth": {
-        "loginUrl": "http://authservice:3333/login",
-        "validateTokenUrl": "http://authservice:3333/validate",
+        "host": "authservice:3333",
+        "loginPath": "/login",
+        "validatePath": "/validate",
         "userHubApiKey": "khdsfgjshdbuysdbfusdffiusdf78sdf6sd76f5sd76f5s87d4f58s6df678s6"
     }
 }

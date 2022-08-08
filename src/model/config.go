@@ -14,7 +14,8 @@ type Service struct {
 }
 
 type Auth struct {
-	LoginUrl         string `mapstructure:"loginUrl"`
-	ValidateTokenUrl string `mapstructure:"validateTokenUrl"`
-	UserHubApiKey    string `mapstructure:"userHubApiKey"`
+	Host          string `mapstructure:"host"`
+	LoginPath     string `mapstructure:"loginPath"`
+	ValidatePath  string `mapstructure:"validatePath"`
+	UserHubApiKey string `mapstructure:"userHubApiKey"`
 }

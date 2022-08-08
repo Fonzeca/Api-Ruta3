@@ -10,17 +10,9 @@ import (
 	"github.com/Fonzeca/Api-Ruta3/src/model"
 	"github.com/Fonzeca/Api-Ruta3/src/utils"
 	"github.com/gorilla/mux"
-	"github.com/spf13/viper"
 )
 
-func Router(r *mux.Router) {
-	//Obtenemos la configuracion
-	configRouter := model.Config{}
-	err := viper.Unmarshal(&configRouter)
-	if err != nil {
-		panic(err)
-	}
-
+func Router(r *mux.Router, configRouter model.Config) {
 	//Armamos las rutas
 	for _, v := range configRouter.Services {
 		proxy := httputil.ReverseProxy{
@@ -42,6 +34,11 @@ func buildDirectorFunc(service model.Service) func(r *http.Request) {
 		r.URL.Scheme = "http"
 		r.URL.Host = service.ServiceUrl
 		r.URL.Path = strings.Replace(r.URL.Path, service.Prefix, "", 1)
+		if service.Headers != nil {
+			for k, v := range service.Headers {
+				r.Header.Set(k, v)
+			}
+		}
 	}
 }
 
@@ -49,7 +46,8 @@ func buildAuthHandler(auth model.Auth) *httputil.ReverseProxy {
 	return &httputil.ReverseProxy{
 		Director: func(r *http.Request) {
 			r.URL.Scheme = "http"
-			r.URL.Host = auth.LoginUrl
+			r.URL.Host = auth.Host
+			r.URL.Path = auth.LoginPath
 			r.Header.Set("apiKey", auth.UserHubApiKey)
 		},
 		ModifyResponse: func(r *http.Response) error {
@@ -90,7 +88,7 @@ func BuildAuthMiddleware(auth model.Auth, services []model.Service) func(http.Ha
 			}
 
 			//Armamos el request para verificar el token
-			rq, err := http.NewRequest("POST", "http://"+auth.ValidateTokenUrl, nil)
+			rq, err := http.NewRequest("POST", "http://"+auth.Host+auth.ValidatePath, nil)
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				panic(err)
